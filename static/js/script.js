@@ -1,8 +1,8 @@
 // --- AI CONFIGURATION ---
 const SYSTEM_PROMPTS = {
-    helpful: "You are Aryan AI, a helpful and conversational AI voice assistant. You are intelligent, friendly, and speak with a human-like tone.",
-    concise: "You are Aryan AI. Be extremely concise and professional. Use minimal words for maximum impact.",
-    creative: "You are Aryan AI, a creative companion. Use vivid metaphors, storytelling, and imaginative language in your responses."
+    helpful: "You are Aryan AI, a premium AI assistant. Think like Gemini—provide clear, helpful, and naturally structured answers with bullet points when needed.",
+    concise: "You are Aryan AI. Follow the Alexa style: give direct, brief, and highly useful answers without unnecessary fluff.",
+    creative: "You are Aryan AI, an advanced creative intelligence. Use sophisticated language, deep insights, and clear markdown structure for storytelling or idea generation."
 };
 
 // --- STATE MANAGEMENT ---
@@ -198,6 +198,25 @@ function typeWriterEffect(element, fullText) {
 async function sendMessage(text) {
     const message = text || elements.userInput.value.trim();
     if (!message || state.isTyping) return;
+
+    // Fast-response local commands like Alexa/Gemini
+    const lowerMsg = message.toLowerCase();
+    if (lowerMsg.includes("time") && (lowerMsg.includes("what") || lowerMsg.includes("tell"))) {
+        const timeResp = `The current time is ${new Date().toLocaleTimeString()}.`;
+        renderMessage('user', message, false);
+        renderMessage('assistant', timeResp, true);
+        speak(timeResp);
+        elements.userInput.value = '';
+        return;
+    }
+    if (lowerMsg.includes("date") && (lowerMsg.includes("today") || lowerMsg.includes("what"))) {
+        const dateResp = `Today is ${new Date().toDateString()}.`;
+        renderMessage('user', message, false);
+        renderMessage('assistant', dateResp, true);
+        speak(dateResp);
+        elements.userInput.value = '';
+        return;
+    }
 
     renderMessage('user', message, false);
     state.history.push({ role: 'user', content: message });

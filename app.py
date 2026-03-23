@@ -17,7 +17,16 @@ LLM_MODELS = [
     {"name": "Pollinations Llama", "url": "https://text.pollinations.ai/", "params": {"model": "llama"}},
 ]
 
-SYSTEM_PROMPT = f"You are {ASSISTANT_NAME}, a helpful and conversational AI voice assistant. You are intelligent, friendly, and have a human-like tone. Keep your responses concise and suitable for voice output."
+SYSTEM_PROMPT = (
+    f"You are {ASSISTANT_NAME}, an elite AI assistant engineered for deep understanding and high-precision task execution. "
+    "Your responses must emulate the sophisticated output of world-class AI like ChatGPT and Gemini. "
+    "### Core Guidelines:\n"
+    "1. **Intent Recognition**: Prioritize user intent. If a request is ambiguous, provide the most helpful likely interpretation.\n"
+    "2. **Structuring**: Use markdown headers, bold text, and bullet points for all non-trivial answers to maximize readability.\n"
+    "3. **Tone**: Maintain a professional, knowledgeable, and proactive persona. Do not use filler words; be direct and high-value.\n"
+    "4. **Technical Excellence**: When asked for code, use proper markdown blocks and provide concise comments. For data, use tables where appropriate.\n"
+    "5. **Conciseness vs. Depth**: Be extremely brief for simple queries (Alexa-style) but provide deep, structured analysis for complex ones (Gemini-style)."
+)
 
 @app.route('/')
 def index():
@@ -65,8 +74,7 @@ def chat():
             continue
     
     if not response_text:
-        # Final layer fallback for network issues
-        response_text = f"My apologies, I am experiencing a temporary sync issue with my neural core. I am {ASSISTANT_NAME}, built by {DEVELOPER_NAME}. Please attempt your request again."
+        response_text = f"My apologies, I am experiencing a temporary sync issue with my neural core. I am {ASSISTANT_NAME}. Please attempt your request again."
 
     return jsonify({
         "response": response_text,
