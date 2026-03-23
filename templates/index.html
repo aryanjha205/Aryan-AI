@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aryan AI - Voice Assistant</title>
+    <meta name="description" content="Aryan AI - Advanced AI Voice Assistant created by Aryan Jha. Using Pollinations AI for intelligence.">
+    <!-- PWA -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#6e8efb">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="dark-theme">
+    <div id="particles-js"></div>
+    <div class="overlay"></div>
+
+    <header>
+        <div class="logo">
+            <span class="logo-icon"><i class="fas fa-brain"></i></span>
+            <h1>Aryan AI</h1>
+        </div>
+        <div class="controls">
+            <button id="theme-toggle" aria-label="Toggle Theme"><i class="fas fa-moon"></i></button>
+            <button id="voice-settings" aria-label="Voice Settings"><i class="fas fa-cog"></i></button>
+        </div>
+    </header>
+
+    <main>
+        <div class="chat-container">
+            <div id="chat-history" class="chat-history">
+                <div class="message assistant">
+                    <div class="msg-content">Hello! I am <strong>Aryan AI</strong>, your personal assistant <strong>created by Aryan Jha</strong>. How can I help you today?</div>
+                    <div class="msg-time">Just now</div>
+                </div>
+            </div>
+            
+            <div class="typing-indicator" id="typing-indicator" style="display: none;">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+
+        <div class="action-center">
+            <div class="input-wrapper">
+                <input type="text" id="user-input" placeholder="Type a message or ask me anything..." autocomplete="off">
+                <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
+            </div>
+            
+            <div class="voice-controls">
+                <button id="mic-btn" class="mic-btn pulse-off">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <div class="status-text" id="status-text">Click to speak...</div>
+            </div>
+        </div>
+    </main>
+
+    <div class="footer-credit">
+        Developed by <a href="#" style="color: #6e8efb; text-decoration: none;">Aryan Jha</a>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="/static/js/script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(reg => {
+                    console.log('SW Registered');
+                }).catch(err => {
+                    console.log('SW Fail: ', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
