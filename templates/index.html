@@ -2,67 +2,109 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aryan AI - Voice Assistant</title>
-    <meta name="description" content="Aryan AI - Advanced AI Voice Assistant created by Aryan Jha. Using Pollinations AI for intelligence.">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Aryan AI | Advanced Voice Intelligence</title>
+    <meta name="description" content="Aryan AI - Advanced AI Voice Assistant created by Aryan Jha. Powered by Pollinations AI for seamless conversational experience.">
     <!-- PWA -->
     <link rel="manifest" href="/static/manifest.json">
-    <meta name="theme-color" content="#6e8efb">
+    <meta name="theme-color" content="#6366f1">
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
     
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body class="dark-theme">
+    <!-- Dynamic Background Layer -->
     <div id="particles-js"></div>
-    <div class="overlay"></div>
+    <div class="aura-container">
+        <div class="aura-blob aura-blob-1"></div>
+        <div class="aura-blob aura-blob-2"></div>
+    </div>
 
     <header>
         <div class="logo">
-            <span class="logo-icon"><i class="fas fa-brain"></i></span>
+            <div class="logo-icon-wrapper">
+                <img src="/static/icons/icon-192.png" alt="Aryan AI Logo" id="app-logo">
+            </div>
             <h1>Aryan AI</h1>
         </div>
-        <div class="controls">
-            <button id="theme-toggle" aria-label="Toggle Theme"><i class="fas fa-moon"></i></button>
-            <button id="voice-settings" aria-label="Voice Settings"><i class="fas fa-cog"></i></button>
+        <div class="header-controls">
+            <button class="header-btn" id="theme-toggle" title="Switch Theme">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="header-btn" id="settings-btn" title="AI Settings">
+                <i class="fas fa-sliders-h"></i>
+            </button>
         </div>
     </header>
 
     <main>
-        <div class="chat-container">
-            <div id="chat-history" class="chat-history">
-                <div class="message assistant">
-                    <div class="msg-content">Hello! I am <strong>Aryan AI</strong>, your personal assistant <strong>created by Aryan Jha</strong>. How can I help you today?</div>
-                    <div class="msg-time">Just now</div>
+        <div class="chat-wrapper" id="chat-history">
+            <!-- Welcome Message -->
+            <div class="message assistant">
+                <div class="msg-content">
+                    Greetings! I am <strong style="color: var(--primary);">Aryan AI</strong>, your sophisticated voice companion <strong style="font-weight: 600;">developed by Aryan Jha</strong>. How may I assist you this today?
                 </div>
-            </div>
-            
-            <div class="typing-indicator" id="typing-indicator" style="display: none;">
-                <span></span><span></span><span></span>
+                <div class="msg-meta">
+                    <i class="fas fa-sparkles"></i> Just now
+                </div>
             </div>
         </div>
 
-        <div class="action-center">
-            <div class="input-wrapper">
-                <input type="text" id="user-input" placeholder="Type a message or ask me anything..." autocomplete="off">
-                <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
+        <!-- Dynamic Typing Indicator (Hidden by default) -->
+        <div id="typing-indicator" class="typing-indicator" style="display: none; margin-bottom: 20px;">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        </div>
+
+        <div class="action-box">
+            <div class="input-container">
+                <input type="text" id="user-input" placeholder="Ask anything to Aryan AI..." autocomplete="off">
+                <button class="send-btn" id="send-btn" title="Send (Enter)">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
             </div>
             
-            <div class="voice-controls">
-                <button id="mic-btn" class="mic-btn pulse-off">
-                    <i class="fas fa-microphone"></i>
-                </button>
-                <div class="status-text" id="status-text">Click to speak...</div>
+            <div class="voice-section">
+                <div class="mic-wrapper">
+                    <button class="mic-btn" id="mic-btn" title="Click to Speak">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <div class="mic-ring" id="mic-ring"></div>
+                </div>
+                <div class="status-label" id="status-text">Aryan AI is ready.</div>
             </div>
         </div>
     </main>
 
-    <div class="footer-credit">
-        Developed by <a href="#" style="color: #6e8efb; text-decoration: none;">Aryan Jha</a>
+    <footer class="foot-note">
+        Crafted with <i class="fas fa-heart" style="color: #ef4444; font-size: 10px;"></i> by <a href="#" target="_blank">Aryan Jha</a> &copy; 2026
+    </footer>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settings-modal">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 20px; font-family: var(--font-ui);">Assistant Settings</h2>
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Voice Speed</span>
+                    <input type="range" min="0.5" max="2" step="0.1" value="1" id="voice-rate" style="accent-color: var(--primary);">
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>AI Intensity</span>
+                    <i class="fas fa-bolt text-accent" style="color: var(--accent);"></i>
+                </div>
+                <button id="close-settings" class="header-btn" style="width: 100%; height: 45px; margin-top: 10px;">Apply & Save</button>
+            </div>
+        </div>
     </div>
 
     <!-- Scripts -->
@@ -72,9 +114,9 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js').then(reg => {
-                    console.log('SW Registered');
+                    console.log('Voice SW Active');
                 }).catch(err => {
-                    console.log('SW Fail: ', err);
+                    console.log('Offline Fail: ', err);
                 });
             });
         }

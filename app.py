@@ -43,25 +43,35 @@ def chat():
     for model in LLM_MODELS:
         try:
             # Construct context-aware prompt
-            full_prompt = f"System: {SYSTEM_PROMPT}\n"
-            for msg in history[-5:]: # Last 5 messages for context
-                full_prompt += f"{msg['role']}: {msg['content']}\n"
-            full_prompt += f"User: {user_input}\nAssistant:"
+            messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+            for msg in history[-5:]:
+                messages.append(msg)
+            messages.append({"role": "user", "content": user_input})
 
             payload = {
-                "messages": history[-5:] + [{"role": "user", "content": user_input}],
-                "model": model["params"]["model"],
-                "system": SYSTEM_PROMPT
+                "messages": messages,
+                "model": model["params"]["model"]
             }
             
-            # Pollinations Text API also supports direct GET with prompt
-            # For robustness, we use the text endpoint which is very stable
+            # Use POST first
             res = requests.post("https://text.pollinations.ai/", json=payload, timeout=10)
             
-            if res.status_code == 200:
+            if res.status_code == 200 and res.text:
                 response_text = res.text
                 used_model = model["name"]
                 break
+            
+            # If POST fails, try simple GET as a second layer fallback for this specific model
+            import urllib.parse
+            safe_prompt = urllib.parse.quote(user_input)
+            get_url = f"https://text.pollinations.ai/prompt/{safe_prompt}?model={model['params']['model']}&system={urllib.parse.quote(SYSTEM_PROMPT)}"
+            res_get = requests.get(get_url, timeout=10)
+            
+            if res_get.status_code == 200 and res_get.text:
+                response_text = res_get.text
+                used_model = model["name"] + " (GET)"
+                break
+                
         except Exception as e:
             print(f"Error with {model['name']}: {e}")
             continue

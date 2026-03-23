@@ -1,13 +1,13 @@
-// Initialize Particles.js
+// --- Initialization & Particles ---
 particlesJS('particles-js', {
     "particles": {
-        "number": { "value": 80, "density": { "enable": true, "value_area": 800 } },
-        "color": { "value": "#6e8efb" },
+        "number": { "value": 60, "density": { "enable": true, "value_area": 800 } },
+        "color": { "value": ["#6366f1", "#a855f7"] },
         "shape": { "type": "circle" },
-        "opacity": { "value": 0.5, "random": false },
+        "opacity": { "value": 0.4, "random": true },
         "size": { "value": 3, "random": true },
-        "line_linked": { "enable": true, "distance": 150, "color": "#6e8efb", "opacity": 0.2, "width": 1 },
-        "move": { "enable": true, "speed": 2, "direction": "none", "random": false, "straight": false, "out_mode": "out", "bounce": false }
+        "line_linked": { "enable": true, "distance": 150, "color": "#6366f1", "opacity": 0.1, "width": 1 },
+        "move": { "enable": true, "speed": 1.5, "direction": "none", "random": true, "straight": false, "out_mode": "out", "bounce": false }
     },
     "interactivity": {
         "detect_on": "canvas",
@@ -21,7 +21,10 @@ const state = {
     history: [],
     isListening: false,
     theme: 'dark',
-    isSpeaking: false
+    isSpeaking: false,
+    isTyping: false,
+    voiceRate: 1.0,
+    voicePitch: 1.0
 };
 
 // DOM Elements
@@ -29,9 +32,14 @@ const chatHistory = document.getElementById('chat-history');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 const micBtn = document.getElementById('mic-btn');
+const micRing = document.getElementById('mic-ring');
 const statusText = document.getElementById('status-text');
 const themeToggle = document.getElementById('theme-toggle');
+const settingsBtn = document.getElementById('settings-btn');
+const settingsModal = document.getElementById('settings-modal');
+const closeSettings = document.getElementById('close-settings');
 const typingIndicator = document.getElementById('typing-indicator');
+const voiceRateInput = document.getElementById('voice-rate');
 
 // --- Voice Recognition ---
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -52,7 +60,7 @@ if (recognition) {
     recognition.onend = () => {
         state.isListening = false;
         micBtn.classList.remove('active');
-        statusText.innerText = 'Click to speak...';
+        statusText.innerText = 'Aryan AI is ready.';
     };
 
     recognition.onresult = (event) => {
@@ -63,11 +71,11 @@ if (recognition) {
 
     recognition.onerror = (e) => {
         console.error('Recognition error:', e);
-        statusText.innerText = 'Error. Try again.';
+        statusText.innerText = 'Request timeout. Try again.';
     };
 } else {
     micBtn.style.display = 'none';
-    statusText.innerText = 'Speech recognition not supported.';
+    statusText.innerText = 'Voice input not available.';
 }
 
 // --- Voice Synthesis ---
@@ -76,23 +84,27 @@ let voice = null;
 
 function loadVoices() {
     const voices = synth.getVoices();
-    // Prefer a clear female/male voice if available
-    voice = voices.find(v => v.name.includes('Google') || v.name.includes('Natural')) || voices[0];
+    // Prefer a premium sounding female voice if available
+    voice = voices.find(v => v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha') || v.name.includes('Microsoft Zira')) || voices[0];
 }
-synth.onvoiceschanged = loadVoices;
-loadVoices();
+
+if (synth) {
+    synth.onvoiceschanged = loadVoices;
+    loadVoices();
+}
 
 function speak(text) {
     if (!synth) return;
     stopSpeaking();
     
-    // Clean text for speech (remove markdown-like symbols)
+    // Clean text for speech
     const cleanText = text.replace(/[*#_~]/g, '');
     
+    // Split long text into manageable chunks
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.voice = voice;
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
+    utterance.rate = state.voiceRate;
+    utterance.pitch = state.voicePitch;
     
     utterance.onstart = () => { state.isSpeaking = true; };
     utterance.onend = () => { state.isSpeaking = false; };
@@ -101,48 +113,66 @@ function speak(text) {
 }
 
 function stopSpeaking() {
-    if (synth.speaking) {
+    if (synth && synth.speaking) {
         synth.cancel();
     }
 }
 
-// --- Core Logic ---
+// --- Chat Core Logic ---
 
 function addMessage(role, content) {
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${role}`;
     
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const icon = role === 'assistant' ? 'sparkles' : 'user';
     
     msgDiv.innerHTML = `
-        <div class="msg-content">${content}</div>
-        <div class="msg-time">${time}</div>
+        <div class="msg-content">${role === 'assistant' ? '' : content}</div>
+        <div class="msg-meta"><i class="fas fa-${icon}"></i> ${time}</div>
     `;
     
     chatHistory.appendChild(msgDiv);
     chatHistory.scrollTop = chatHistory.scrollHeight;
+
+    // Typing effect for assistant
+    if (role === 'assistant') {
+        typeWriter(msgDiv.querySelector('.msg-content'), content);
+    }
     
     // Maintain state history
     state.history.push({ role, content });
-    if (state.history.length > 10) state.history.shift();
+    if (state.history.length > 20) state.history.shift();
+}
+
+function typeWriter(element, text) {
+    state.isTyping = true;
+    let i = 0;
+    const speed = 10; // Typing speed in ms
+
+    function type() {
+        if (i < text.length) {
+            element.innerHTML += text.charAt(i);
+            i++;
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+            setTimeout(type, speed);
+        } else {
+            state.isTyping = false;
+        }
+    }
+    type();
 }
 
 async function sendMessage(text) {
     const message = text || userInput.value.trim();
-    if (!message) return;
-
-    // Handle Local Commands
-    if (handleCommands(message.toLowerCase())) {
-        userInput.value = '';
-        return;
-    }
+    if (!message || state.isTyping) return;
 
     // Add User Message UI
     addMessage('user', message);
     userInput.value = '';
     
-    // Show typing
-    typingIndicator.style.display = 'flex';
+    // Show typing indicator
+    typingIndicator.style.display = 'inline-flex';
     chatHistory.scrollTop = chatHistory.scrollHeight;
 
     try {
@@ -164,43 +194,10 @@ async function sendMessage(text) {
     } catch (error) {
         console.error('Chat error:', error);
         typingIndicator.style.display = 'none';
-        addMessage('assistant', "I'm having trouble connecting. Please check your internet.");
-        speak("I am having trouble connecting to my brain.");
+        const errorMsg = "I'm having trouble connecting to my neural core. Please check your network.";
+        addMessage('assistant', errorMsg);
+        speak("Connectivity lost. Re-establishing link...");
     }
-}
-
-function handleCommands(text) {
-    if (text.includes('open google')) {
-        speak("Opening Google for you.");
-        window.open('https://www.google.com', '_blank');
-        return true;
-    }
-    if (text.includes('open youtube')) {
-        speak("Opening YouTube.");
-        window.open('https://www.youtube.com', '_blank');
-        return true;
-    }
-    if (text.includes('the time')) {
-        const time = new Date().toLocaleTimeString();
-        const response = `The current time is ${time}.`;
-        addMessage('assistant', response);
-        speak(response);
-        return true;
-    }
-    if (text.includes('the date')) {
-        const date = new Date().toDateString();
-        const response = `Today is ${date}.`;
-        addMessage('assistant', response);
-        speak(response);
-        return true;
-    }
-    if (text.includes('who created you') || text.includes('who is your creator')) {
-        const response = "I was created by Aryan Jha. He is a brilliant developer.";
-        addMessage('assistant', response);
-        speak(response);
-        return true;
-    }
-    return false;
 }
 
 // --- Event Listeners ---
@@ -225,7 +222,30 @@ themeToggle.addEventListener('click', () => {
     themeToggle.innerHTML = isLight ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
 });
 
+settingsBtn.addEventListener('click', () => {
+    settingsModal.style.display = 'flex';
+    setTimeout(() => settingsModal.classList.add('show'), 10);
+});
+
+closeSettings.addEventListener('click', () => {
+    settingsModal.classList.remove('show');
+    setTimeout(() => settingsModal.style.display = 'none', 300);
+    state.voiceRate = parseFloat(voiceRateInput.value);
+});
+
+// Click outside to close modal
+window.addEventListener('click', (e) => {
+    if (e.target === settingsModal) {
+        closeSettings.click();
+    }
+});
+
 // Startup focus
 window.onload = () => {
     userInput.focus();
+    // Add initial small bounce to logo
+    document.getElementById('app-logo').style.transform = 'scale(1.2)';
+    setTimeout(() => {
+        document.getElementById('app-logo').style.transform = 'scale(1)';
+    }, 500);
 };
