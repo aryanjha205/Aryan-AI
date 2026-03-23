@@ -1,21 +1,25 @@
 {
-  "name": "Aryan AI - Voice Assistant",
+  "name": "Aryan AI | Advanced Voice Intelligence",
   "short_name": "Aryan AI",
-  "description": "Advanced AI Voice Assistant by Aryan Jha",
+  "description": "Premium AI Voice Assistant. Context-aware, personalized, and beautifully designed.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#121212",
-  "theme_color": "#6e8efb",
+  "background_color": "#0f172a",
+  "theme_color": "#6366f1",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "/static/icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/static/icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "categories": ["productivity", "utilities", "ai"]
 }

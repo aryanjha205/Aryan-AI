@@ -17,7 +17,7 @@ LLM_MODELS = [
     {"name": "Pollinations Llama", "url": "https://text.pollinations.ai/", "params": {"model": "llama"}},
 ]
 
-SYSTEM_PROMPT = f"You are {ASSISTANT_NAME}, a helpful and conversational AI voice assistant created by {DEVELOPER_NAME}. You are intelligent, friendly, and have a human-like tone. Keep your responses concise and suitable for voice output. Current Developer: {DEVELOPER_NAME}."
+SYSTEM_PROMPT = f"You are {ASSISTANT_NAME}, a helpful and conversational AI voice assistant. You are intelligent, friendly, and have a human-like tone. Keep your responses concise and suitable for voice output."
 
 @app.route('/')
 def index():
@@ -32,9 +32,7 @@ def chat():
     data = request.json
     user_input = data.get('message', '')
     history = data.get('history', [])
-    
-    # Simple response caching (in-memory for session)
-    # In a real app, you might use Redis, but here we keep it simple.
+    custom_system = data.get('system', '') or SYSTEM_PROMPT
     
     response_text = ""
     used_model = ""
@@ -43,8 +41,9 @@ def chat():
     for model in LLM_MODELS:
         try:
             # Construct context-aware prompt
-            messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-            for msg in history[-5:]:
+            messages = [{"role": "system", "content": custom_system}]
+            # Only use last 10 messages to keep request size managed
+            for msg in history[-10:]:
                 messages.append(msg)
             messages.append({"role": "user", "content": user_input})
 
@@ -53,23 +52,12 @@ def chat():
                 "model": model["params"]["model"]
             }
             
-            # Use POST first
-            res = requests.post("https://text.pollinations.ai/", json=payload, timeout=10)
+            # Using Pollinations AI
+            res = requests.post("https://text.pollinations.ai/", json=payload, timeout=15)
             
             if res.status_code == 200 and res.text:
                 response_text = res.text
                 used_model = model["name"]
-                break
-            
-            # If POST fails, try simple GET as a second layer fallback for this specific model
-            import urllib.parse
-            safe_prompt = urllib.parse.quote(user_input)
-            get_url = f"https://text.pollinations.ai/prompt/{safe_prompt}?model={model['params']['model']}&system={urllib.parse.quote(SYSTEM_PROMPT)}"
-            res_get = requests.get(get_url, timeout=10)
-            
-            if res_get.status_code == 200 and res_get.text:
-                response_text = res_get.text
-                used_model = model["name"] + " (GET)"
                 break
                 
         except Exception as e:
@@ -77,7 +65,8 @@ def chat():
             continue
     
     if not response_text:
-        response_text = f"I'm sorry, I'm having trouble connecting to my brain right now. But I am {ASSISTANT_NAME}, created by {DEVELOPER_NAME}. Please try again in a moment."
+        # Final layer fallback for network issues
+        response_text = f"My apologies, I am experiencing a temporary sync issue with my neural core. I am {ASSISTANT_NAME}, built by {DEVELOPER_NAME}. Please attempt your request again."
 
     return jsonify({
         "response": response_text,

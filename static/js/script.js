@@ -1,160 +1,192 @@
-// --- Initialization & Particles ---
-particlesJS('particles-js', {
-    "particles": {
-        "number": { "value": 60, "density": { "enable": true, "value_area": 800 } },
-        "color": { "value": ["#6366f1", "#a855f7"] },
-        "shape": { "type": "circle" },
-        "opacity": { "value": 0.4, "random": true },
-        "size": { "value": 3, "random": true },
-        "line_linked": { "enable": true, "distance": 150, "color": "#6366f1", "opacity": 0.1, "width": 1 },
-        "move": { "enable": true, "speed": 1.5, "direction": "none", "random": true, "straight": false, "out_mode": "out", "bounce": false }
-    },
-    "interactivity": {
-        "detect_on": "canvas",
-        "events": { "onhover": { "enable": true, "mode": "grab" }, "onclick": { "enable": true, "mode": "push" }, "resize": true }
-    },
-    "retina_detect": true
-});
-
-// Assistant State
-const state = {
-    history: [],
-    isListening: false,
-    theme: 'dark',
-    isSpeaking: false,
-    isTyping: false,
-    voiceRate: 1.0,
-    voicePitch: 1.0
+// --- AI CONFIGURATION ---
+const SYSTEM_PROMPTS = {
+    helpful: "You are Aryan AI, a helpful and conversational AI voice assistant. You are intelligent, friendly, and speak with a human-like tone.",
+    concise: "You are Aryan AI. Be extremely concise and professional. Use minimal words for maximum impact.",
+    creative: "You are Aryan AI, a creative companion. Use vivid metaphors, storytelling, and imaginative language in your responses."
 };
 
-// DOM Elements
-const chatHistory = document.getElementById('chat-history');
-const userInput = document.getElementById('user-input');
-const sendBtn = document.getElementById('send-btn');
-const micBtn = document.getElementById('mic-btn');
-const micRing = document.getElementById('mic-ring');
-const statusText = document.getElementById('status-text');
-const themeToggle = document.getElementById('theme-toggle');
-const settingsBtn = document.getElementById('settings-btn');
-const settingsModal = document.getElementById('settings-modal');
-const closeSettings = document.getElementById('close-settings');
-const typingIndicator = document.getElementById('typing-indicator');
-const voiceRateInput = document.getElementById('voice-rate');
+// --- STATE MANAGEMENT ---
+const state = {
+    history: JSON.parse(localStorage.getItem('aryan_ai_history')) || [],
+    isListening: false,
+    isSpeaking: false,
+    isTyping: false,
+    theme: localStorage.getItem('aryan_ai_theme') || 'dark',
+    settings: {
+        voiceRate: parseFloat(localStorage.getItem('voice_rate')) || 1.0,
+        personality: localStorage.getItem('ai_personality') || 'helpful',
+        autoSpeak: localStorage.getItem('auto_speak') !== 'false'
+    }
+};
 
-// --- Voice Recognition ---
+// --- DOM ELEMENTS ---
+const elements = {
+    chatHistory: document.getElementById('chat-history'),
+    userInput: document.getElementById('user-input'),
+    sendBtn: document.getElementById('send-btn'),
+    micBtn: document.getElementById('mic-btn'),
+    statusText: document.getElementById('status-text'),
+    voiceWave: document.getElementById('voice-wave'),
+    themeToggle: document.getElementById('theme-toggle'),
+    historyClear: document.getElementById('history-clear'),
+    settingsBtn: document.getElementById('settings-btn'),
+    settingsModal: document.getElementById('settings-modal'),
+    saveSettings: document.getElementById('save-settings'),
+    closeSettingsX: document.getElementById('close-settings-x'),
+    typingIndicator: document.getElementById('typing-indicator'),
+    voiceRateRange: document.getElementById('voice-rate'),
+    rateValSpan: document.getElementById('rate-val'),
+    personalitySelect: document.getElementById('ai-personality'),
+    autoSpeakToggle: document.getElementById('auto-speak')
+};
+
+// --- INITIALIZATION ---
+function init() {
+    // Set theme
+    document.body.className = `${state.theme}-theme`;
+    elements.themeToggle.innerHTML = state.theme === 'dark' ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
+    
+    // Set settings values in UI
+    elements.voiceRateRange.value = state.settings.voiceRate;
+    elements.rateValSpan.innerText = state.settings.voiceRate.toFixed(1) + 'x';
+    elements.personalitySelect.value = state.settings.personality;
+    elements.autoSpeakToggle.checked = state.settings.autoSpeak;
+
+    // Render history
+    if (state.history.length > 0) {
+        state.history.forEach(msg => renderMessage(msg.role, msg.content, false));
+    } else {
+        addWelcomeMessage();
+    }
+    
+    setupParticles();
+    elements.userInput.focus();
+}
+
+function setupParticles() {
+    particlesJS('particles-js', {
+        "particles": {
+            "number": { "value": 60, "density": { "enable": true, "value_area": 800 } },
+            "color": { "value": ["#6366f1", "#a855f7"] },
+            "shape": { "type": "circle" },
+            "opacity": { "value": 0.4, "random": true },
+            "size": { "value": 3, "random": true },
+            "line_linked": { "enable": true, "distance": 150, "color": "#6366f1", "opacity": 0.1, "width": 1 },
+            "move": { "enable": true, "speed": 1.5, "direction": "none", "random": true, "straight": false, "out_mode": "out", "bounce": false }
+        },
+        "interactivity": {
+            "detect_on": "canvas",
+            "events": { "onhover": { "enable": true, "mode": "grab" }, "onclick": { "enable": true, "mode": "push" }, "resize": true }
+        },
+        "retina_detect": true
+    });
+}
+
+function addWelcomeMessage() {
+    const welcome = "Hello! I am **Aryan AI**, your sophisticated voice companion. How may I assist you today?";
+    renderMessage('assistant', welcome, true);
+}
+
+// --- VOICE LOGIC ---
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 const recognition = SpeechRecognition ? new SpeechRecognition() : null;
 
 if (recognition) {
     recognition.continuous = false;
     recognition.lang = 'en-US';
-    recognition.interimResults = false;
-
+    
     recognition.onstart = () => {
         state.isListening = true;
-        micBtn.classList.add('active');
-        statusText.innerText = 'Listening...';
-        stopSpeaking(); // Stop AI if it was speaking
+        elements.micBtn.classList.add('active');
+        elements.voiceWave.style.display = 'flex';
+        elements.statusText.innerText = 'Listening actively...';
+        stopSpeaking();
     };
 
     recognition.onend = () => {
         state.isListening = false;
-        micBtn.classList.remove('active');
-        statusText.innerText = 'Aryan AI is ready.';
+        elements.micBtn.classList.remove('active');
+        elements.voiceWave.style.display = 'none';
+        elements.statusText.innerText = 'Aryan AI protocol idle.';
     };
 
     recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
-        userInput.value = transcript;
+        elements.userInput.value = transcript;
         sendMessage(transcript);
     };
 
-    recognition.onerror = (e) => {
-        console.error('Recognition error:', e);
-        statusText.innerText = 'Request timeout. Try again.';
+    recognition.onerror = () => {
+        elements.statusText.innerText = 'Voice timed out. Try again.';
     };
-} else {
-    micBtn.style.display = 'none';
-    statusText.innerText = 'Voice input not available.';
 }
 
-// --- Voice Synthesis ---
 const synth = window.speechSynthesis;
-let voice = null;
+let currentVoice = null;
 
 function loadVoices() {
     const voices = synth.getVoices();
-    // Prefer a premium sounding female voice if available
-    voice = voices.find(v => v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha') || v.name.includes('Microsoft Zira')) || voices[0];
+    currentVoice = voices.find(v => v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha')) || voices[0];
 }
-
-if (synth) {
-    synth.onvoiceschanged = loadVoices;
-    loadVoices();
-}
+if (synth) synth.onvoiceschanged = loadVoices;
 
 function speak(text) {
-    if (!synth) return;
+    if (!synth || !state.settings.autoSpeak) return;
     stopSpeaking();
     
-    // Clean text for speech
-    const cleanText = text.replace(/[*#_~]/g, '');
-    
-    // Split long text into manageable chunks
+    const cleanText = text.replace(/[*#_~`<>]/g, '');
     const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.voice = voice;
-    utterance.rate = state.voiceRate;
-    utterance.pitch = state.voicePitch;
+    utterance.voice = currentVoice;
+    utterance.rate = state.settings.voiceRate;
     
-    utterance.onstart = () => { state.isSpeaking = true; };
-    utterance.onend = () => { state.isSpeaking = false; };
+    utterance.onstart = () => state.isSpeaking = true;
+    utterance.onend = () => state.isSpeaking = false;
     
     synth.speak(utterance);
 }
 
 function stopSpeaking() {
-    if (synth && synth.speaking) {
-        synth.cancel();
-    }
+    if (synth && synth.speaking) synth.cancel();
 }
 
-// --- Chat Core Logic ---
-
-function addMessage(role, content) {
+// --- MESSAGE RENDERING ---
+function renderMessage(role, content, animate = true) {
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${role}`;
     
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const icon = role === 'assistant' ? 'sparkles' : 'user';
-    
+
     msgDiv.innerHTML = `
-        <div class="msg-content">${role === 'assistant' ? '' : content}</div>
+        <div class="msg-content"></div>
         <div class="msg-meta"><i class="fas fa-${icon}"></i> ${time}</div>
     `;
-    
-    chatHistory.appendChild(msgDiv);
-    chatHistory.scrollTop = chatHistory.scrollHeight;
 
-    // Typing effect for assistant
-    if (role === 'assistant') {
-        typeWriter(msgDiv.querySelector('.msg-content'), content);
+    const contentArea = msgDiv.querySelector('.msg-content');
+    elements.chatHistory.appendChild(msgDiv);
+    elements.chatHistory.scrollTop = elements.chatHistory.scrollHeight;
+
+    if (role === 'assistant' && animate) {
+        typeWriterEffect(contentArea, content);
+    } else {
+        contentArea.innerHTML = marked.parse(content);
     }
-    
-    // Maintain state history
-    state.history.push({ role, content });
-    if (state.history.length > 20) state.history.shift();
 }
 
-function typeWriter(element, text) {
+function typeWriterEffect(element, fullText) {
     state.isTyping = true;
-    let i = 0;
-    const speed = 10; // Typing speed in ms
+    let index = 0;
+    const speed = 15;
+    element.innerHTML = "";
 
     function type() {
-        if (i < text.length) {
-            element.innerHTML += text.charAt(i);
-            i++;
-            chatHistory.scrollTop = chatHistory.scrollHeight;
+        if (index < fullText.length) {
+            // We use a temporary string to render partially parsed markdown if needed, 
+            // but for smooth typing, we append characters and then re-parse
+            const partialText = fullText.substring(0, index + 1);
+            element.innerHTML = marked.parse(partialText);
+            index++;
+            elements.chatHistory.scrollTop = elements.chatHistory.scrollHeight;
             setTimeout(type, speed);
         } else {
             state.isTyping = false;
@@ -164,16 +196,16 @@ function typeWriter(element, text) {
 }
 
 async function sendMessage(text) {
-    const message = text || userInput.value.trim();
+    const message = text || elements.userInput.value.trim();
     if (!message || state.isTyping) return;
 
-    // Add User Message UI
-    addMessage('user', message);
-    userInput.value = '';
+    renderMessage('user', message, false);
+    state.history.push({ role: 'user', content: message });
+    saveToLocal();
     
-    // Show typing indicator
-    typingIndicator.style.display = 'inline-flex';
-    chatHistory.scrollTop = chatHistory.scrollHeight;
+    elements.userInput.value = '';
+    elements.typingIndicator.style.display = 'inline-flex';
+    elements.chatHistory.scrollTop = elements.chatHistory.scrollHeight;
 
     try {
         const response = await fetch('/chat', {
@@ -181,71 +213,87 @@ async function sendMessage(text) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 message: message,
-                history: state.history
+                history: state.history.slice(-10),
+                system: SYSTEM_PROMPTS[state.settings.personality]
             })
         });
 
         const data = await response.json();
+        elements.typingIndicator.style.display = 'none';
         
-        typingIndicator.style.display = 'none';
-        addMessage('assistant', data.response);
+        renderMessage('assistant', data.response, true);
+        state.history.push({ role: 'assistant', content: data.response });
+        saveToLocal();
+        
         speak(data.response);
-        
-    } catch (error) {
-        console.error('Chat error:', error);
-        typingIndicator.style.display = 'none';
-        const errorMsg = "I'm having trouble connecting to my neural core. Please check your network.";
-        addMessage('assistant', errorMsg);
-        speak("Connectivity lost. Re-establishing link...");
+    } catch (err) {
+        console.error(err);
+        elements.typingIndicator.style.display = 'none';
+        const errorMsg = "System failure in neural link. Please check connectivity.";
+        renderMessage('assistant', errorMsg, true);
     }
 }
 
-// --- Event Listeners ---
+function saveToLocal() {
+    localStorage.setItem('aryan_ai_history', JSON.stringify(state.history.slice(-30)));
+}
 
-sendBtn.addEventListener('click', () => sendMessage());
+// --- EVENT HANDLERS ---
+elements.sendBtn.addEventListener('click', () => sendMessage());
+elements.userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-userInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendMessage();
+elements.micBtn.addEventListener('click', () => {
+    if (state.isListening) recognition.stop();
+    else recognition.start();
 });
 
-micBtn.addEventListener('click', () => {
-    if (state.isListening) {
-        recognition.stop();
-    } else {
-        recognition.start();
+elements.themeToggle.addEventListener('click', () => {
+    state.theme = state.theme === 'dark' ? 'light' : 'dark';
+    document.body.className = `${state.theme}-theme`;
+    localStorage.setItem('aryan_ai_theme', state.theme);
+    elements.themeToggle.innerHTML = state.theme === 'dark' ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
+});
+
+elements.historyClear.addEventListener('click', () => {
+    if (confirm("Erase core memory? All previous chats will be lost.")) {
+        state.history = [];
+        localStorage.removeItem('aryan_ai_history');
+        elements.chatHistory.innerHTML = '';
+        addWelcomeMessage();
     }
 });
 
-themeToggle.addEventListener('click', () => {
-    document.body.classList.toggle('light-theme');
-    const isLight = document.body.classList.contains('light-theme');
-    themeToggle.innerHTML = isLight ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+elements.settingsBtn.addEventListener('click', () => {
+    elements.settingsModal.style.display = 'flex';
+    setTimeout(() => elements.settingsModal.classList.add('show'), 10);
 });
 
-settingsBtn.addEventListener('click', () => {
-    settingsModal.style.display = 'flex';
-    setTimeout(() => settingsModal.classList.add('show'), 10);
-});
-
-closeSettings.addEventListener('click', () => {
-    settingsModal.classList.remove('show');
-    setTimeout(() => settingsModal.style.display = 'none', 300);
-    state.voiceRate = parseFloat(voiceRateInput.value);
-});
-
-// Click outside to close modal
-window.addEventListener('click', (e) => {
-    if (e.target === settingsModal) {
-        closeSettings.click();
-    }
-});
-
-// Startup focus
-window.onload = () => {
-    userInput.focus();
-    // Add initial small bounce to logo
-    document.getElementById('app-logo').style.transform = 'scale(1.2)';
-    setTimeout(() => {
-        document.getElementById('app-logo').style.transform = 'scale(1)';
-    }, 500);
+const closeS = () => {
+    elements.settingsModal.classList.remove('show');
+    setTimeout(() => elements.settingsModal.style.display = 'none', 300);
 };
+elements.closeSettingsX.addEventListener('click', closeS);
+window.addEventListener('click', (e) => { if (e.target === elements.settingsModal) closeS(); });
+
+elements.voiceRateRange.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    elements.rateValSpan.innerText = val.toFixed(1) + 'x';
+});
+
+elements.saveSettings.addEventListener('click', () => {
+    state.settings.voiceRate = parseFloat(elements.voiceRateRange.value);
+    state.settings.personality = elements.personalitySelect.value;
+    state.settings.autoSpeak = elements.autoSpeakToggle.checked;
+    
+    localStorage.setItem('voice_rate', state.settings.voiceRate);
+    localStorage.setItem('ai_personality', state.settings.personality);
+    localStorage.setItem('auto_speak', state.settings.autoSpeak);
+    
+    closeS();
+    // Small toast notification (optional)
+    elements.statusText.innerText = 'Preferences updated.';
+    setTimeout(() => elements.statusText.innerText = 'Aryan AI protocol idle.', 2000);
+});
+
+// Run Init
+window.onload = init;
